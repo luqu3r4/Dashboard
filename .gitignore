@@ -1,0 +1,11 @@
+# Planificación de trabajo (ver CLAUDE.md) — no se versiona
+/task/
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Docker
+docker-compose.override.yml
