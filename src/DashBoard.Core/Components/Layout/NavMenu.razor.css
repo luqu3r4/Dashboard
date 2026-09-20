@@ -1,0 +1,26 @@
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    padding-top: 1rem;
+}
+
+.nav-item {
+    padding: 0.25rem 1.25rem;
+}
+
+.nav-link {
+    display: block;
+    color: #d7d9dd;
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}

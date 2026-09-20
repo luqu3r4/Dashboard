@@ -1,3 +1,37 @@
+.page {
+    position: relative;
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background-color: #2b2f38;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row {
+    display: flex;
+    align-items: center;
+    height: 3.5rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.app-title {
+    font-weight: 600;
+}
+
+.content {
+    flex: 1;
+    padding-top: 1.5rem;
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
