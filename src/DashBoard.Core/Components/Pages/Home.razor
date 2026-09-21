@@ -1,7 +1,32 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Inicio</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1 class="h3 mb-2">Inicio</h1>
+<p class="text-secondary mb-4">Accede directamente a cada módulo.</p>
 
-Welcome to your new app.
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    @foreach (var module in Modules)
+    {
+        <div class="col">
+            <div class="card module-card h-100">
+                <div class="card-body">
+                    <i class="bi @module.Icon module-card-icon"></i>
+                    <h2 class="h5 card-title mt-3 mb-1">@module.Title</h2>
+                    <p class="card-text text-secondary mb-0">@module.Description</p>
+                    <a href="@module.Href" class="stretched-link" aria-label="Ir a @module.Title"></a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private sealed record ModuleCard(string Title, string Description, string Icon, string Href);
+
+    private static readonly ModuleCard[] Modules =
+    [
+        new("Proyectos", "Pendiente de conectar como módulo independiente.", "bi-kanban-fill", "proyectos"),
+        new("Sistema / Homelab", "Pendiente de conectar como módulo independiente.", "bi-hdd-network-fill", "sistema"),
+    ];
+}
