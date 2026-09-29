@@ -1,6 +1,134 @@
 @page "/sistema"
+@rendermode InteractiveServer
+@implements IDisposable
+@inject HostMetricsSampler Sampler
 
 <PageTitle>Sistema / Homelab</PageTitle>
 
-<h1 class="h3 mb-2">Sistema / Homelab</h1>
-<p class="text-secondary">En construcción</p>
+<h1 class="h3 mb-4">Sistema / Homelab</h1>
+
+@{
+    var m = Sampler.Current;
+}
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary"><i class="bi bi-cpu me-2"></i>CPU</h2>
+                @if (m?.CpuPercent is { } cpu)
+                {
+                    <p class="display-6 mb-2">@cpu.ToString("0.0") %</p>
+                    <div class="progress" role="progressbar" aria-label="Uso de CPU" aria-valuenow="@((int)cpu)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @((int)cpu)%"></div>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">No disponible</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary"><i class="bi bi-memory me-2"></i>Memoria RAM</h2>
+                @if (m?.Memory is { } mem)
+                {
+                    <p class="display-6 mb-2">@MetricsFormat.Gigabytes(mem.Used) / @MetricsFormat.Gigabytes(mem.Total)</p>
+                    <div class="progress" role="progressbar" aria-label="Uso de memoria" aria-valuenow="@((int)mem.Percent)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @((int)mem.Percent)%"></div>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">No disponible</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary"><i class="bi bi-device-hdd me-2"></i>Disco</h2>
+                @if (m?.Disk is { } disk)
+                {
+                    <p class="display-6 mb-2">@MetricsFormat.Gigabytes(disk.Used) / @MetricsFormat.Gigabytes(disk.Total)</p>
+                    <div class="progress" role="progressbar" aria-label="Uso de disco" aria-valuenow="@((int)disk.Percent)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @((int)disk.Percent)%"></div>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">No disponible</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary"><i class="bi bi-thermometer-half me-2"></i>Temperatura</h2>
+                @if (m?.TemperatureCelsius is { } temp)
+                {
+                    <p class="display-6 mb-0 @MetricsFormat.TemperatureClass(temp)">@temp.ToString("0.0") °C</p>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">No disponible</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-secondary"><i class="bi bi-clock-history me-2"></i>Tiempo encendida</h2>
+                @if (m?.Uptime is { } uptime)
+                {
+                    <p class="display-6 mb-0">@MetricsFormat.Uptime(uptime)</p>
+                }
+                else
+                {
+                    <p class="text-secondary mb-0">No disponible</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _disposed;
+
+    protected override void OnInitialized() => Sampler.Updated += OnUpdated;
+
+    private void OnUpdated()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = InvokeAsync(() =>
+            {
+                if (!_disposed)
+                {
+                    StateHasChanged();
+                }
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // El componente se liberó entre el evento y el renderizado.
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Sampler.Updated -= OnUpdated;
+    }
+}
