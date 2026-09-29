@@ -1,6 +1,7 @@
 **/bin/
 **/obj/
 **/.vs/
-task/
+tests/
+docs/
 .git/
 *.user

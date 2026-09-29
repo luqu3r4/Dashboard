@@ -1,4 +1,4 @@
-using DashBoard.Core.Components;
+using DashBoard.Web.Components;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
