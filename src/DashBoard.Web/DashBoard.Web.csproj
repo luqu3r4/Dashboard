@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DashBoard.Core\DashBoard.Core.csproj" />
+    <ProjectReference Include="..\Modules\DashBoard.Modules.Sistema\DashBoard.Modules.Sistema.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

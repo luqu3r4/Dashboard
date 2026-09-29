@@ -1,3 +1,6 @@
+@using DashBoard.Core
+@inject IEnumerable<IDashboardModule> Modules
+
 <nav class="nav-menu">
     <div class="nav-item">
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -5,16 +8,13 @@
             <span>Inicio</span>
         </NavLink>
     </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="proyectos">
-            <i class="bi bi-kanban-fill"></i>
-            <span>Proyectos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="sistema">
-            <i class="bi bi-hdd-network-fill"></i>
-            <span>Sistema / Homelab</span>
-        </NavLink>
-    </div>
+    @foreach (var module in Modules)
+    {
+        <div class="nav-item">
+            <NavLink class="nav-link" href="@module.Route">
+                <i class="bi @module.Icon"></i>
+                <span>@module.Title</span>
+            </NavLink>
+        </div>
+    }
 </nav>
