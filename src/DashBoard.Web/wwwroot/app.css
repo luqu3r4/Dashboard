@@ -17,16 +17,6 @@ body {
     min-height: 100vh;
 }
 
-.placeholder-card {
-    border-color: var(--bs-border-color);
-    max-width: 40rem;
-}
-
-.placeholder-icon {
-    font-size: 1.75rem;
-    color: var(--bs-primary);
-}
-
 .module-card {
     position: relative;
     border-color: var(--bs-border-color);

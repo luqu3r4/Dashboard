@@ -1,4 +1,6 @@
 @page "/"
+@using DashBoard.Core
+@inject IEnumerable<IDashboardModule> Modules
 
 <PageTitle>Inicio</PageTitle>
 
@@ -14,19 +16,9 @@
                     <i class="bi @module.Icon module-card-icon"></i>
                     <h2 class="h5 card-title mt-3 mb-1">@module.Title</h2>
                     <p class="card-text text-secondary mb-0">@module.Description</p>
-                    <a href="@module.Href" class="stretched-link" aria-label="Ir a @module.Title"></a>
+                    <a href="@module.Route" class="stretched-link" aria-label="Ir a @module.Title"></a>
                 </div>
             </div>
         </div>
     }
 </div>
-
-@code {
-    private sealed record ModuleCard(string Title, string Description, string Icon, string Href);
-
-    private static readonly ModuleCard[] Modules =
-    [
-        new("Proyectos", "Pendiente de conectar como módulo independiente.", "bi-kanban-fill", "proyectos"),
-        new("Sistema / Homelab", "Pendiente de conectar como módulo independiente.", "bi-hdd-network-fill", "sistema"),
-    ];
-}

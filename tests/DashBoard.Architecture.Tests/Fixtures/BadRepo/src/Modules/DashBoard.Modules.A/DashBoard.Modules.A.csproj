@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\DashBoard.Modules.B\DashBoard.Modules.B.csproj" />
+  </ItemGroup>
+</Project>

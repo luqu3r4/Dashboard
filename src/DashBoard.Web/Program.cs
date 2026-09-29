@@ -1,4 +1,7 @@
-using DashBoard.Core.Components;
+using DashBoard.Core;
+using DashBoard.Modules.Sistema;
+using DashBoard.Web;
+using DashBoard.Web.Components;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +12,15 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/keys"));
+
+IDashboardModule[] modules = [new SistemaModule()];
+foreach (var module in modules)
+{
+    module.ConfigureServices(builder.Services, builder.Configuration);
+    builder.Services.AddSingleton(module);
+}
+var catalog = new ModuleCatalog(modules);
+builder.Services.AddSingleton(catalog);
 
 var app = builder.Build();
 
@@ -26,6 +38,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies([.. catalog.Assemblies]);
 
 app.Run();

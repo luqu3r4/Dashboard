@@ -1,0 +1,20 @@
+@using DashBoard.Core
+@inject IEnumerable<IDashboardModule> Modules
+
+<nav class="nav-menu">
+    <div class="nav-item">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <i class="bi bi-house-door-fill"></i>
+            <span>Inicio</span>
+        </NavLink>
+    </div>
+    @foreach (var module in Modules)
+    {
+        <div class="nav-item">
+            <NavLink class="nav-link" href="@module.Route">
+                <i class="bi @module.Icon"></i>
+                <span>@module.Title</span>
+            </NavLink>
+        </div>
+    }
+</nav>

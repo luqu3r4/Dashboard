@@ -7,6 +7,21 @@ services:
       - "8080:8080"
     volumes:
       - dataprotection-keys:/keys
+      # ":ro" = read-only: el contenedor puede leer esas rutas del host pero no modificarlas.
+      # Se montan bajo /host/* porque el /proc y /sys propios del contenedor solo muestran
+      # el contenedor; para medir la máquina real hay que leer los del host.
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      # "/" se monta únicamente para medir el uso de disco.
+      - /:/host/root:ro
+    environment:
+      # Idioma/formato regional español (números, fechas) dentro del contenedor.
+      - LANG=es_ES.UTF-8
+      # Las variables "Sistema__X" (doble guion bajo) sobrescriben la clave "Sistema:X"
+      # de la configuración de la aplicación.
+      - Sistema__ProcPath=/host/proc
+      - Sistema__SysPath=/host/sys
+      - Sistema__DiskPath=/host/root
     restart: unless-stopped
 
 volumes:
