@@ -7,6 +7,14 @@ services:
       - "8080:8080"
     volumes:
       - dataprotection-keys:/keys
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    environment:
+      - LANG=es_ES.UTF-8
+      - Sistema__ProcPath=/host/proc
+      - Sistema__SysPath=/host/sys
+      - Sistema__DiskPath=/host/root
     restart: unless-stopped
 
 volumes:
