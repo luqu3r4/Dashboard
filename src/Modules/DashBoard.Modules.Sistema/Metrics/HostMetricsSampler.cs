@@ -21,7 +21,15 @@ public sealed class HostMetricsSampler(HostMetricsReader reader, IOptions<Sistem
         {
             Sample();
 
-            using var timer = new PeriodicTimer(options.Value.RefreshInterval);
+            // Un intervalo <= 0 es una configuración inválida: se usa el valor por defecto
+            // en lugar de dejar que PeriodicTimer lance y detenga el host.
+            var interval = options.Value.RefreshInterval;
+            if (interval <= TimeSpan.Zero)
+            {
+                interval = TimeSpan.FromSeconds(2);
+            }
+
+            using var timer = new PeriodicTimer(interval);
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 Sample();

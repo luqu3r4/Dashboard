@@ -3,6 +3,11 @@ using Microsoft.Extensions.Options;
 
 namespace DashBoard.Modules.Sistema.Metrics;
 
+/// <summary>
+/// Lee las métricas de la máquina. Es con estado (recuerda la lectura anterior de CPU y los
+/// fallos ya registrados) y no es seguro entre hilos: solo debe llamarse desde el único bucle
+/// de <see cref="HostMetricsSampler"/>.
+/// </summary>
 public sealed class HostMetricsReader(
     IOptions<SistemaOptions> options,
     ILogger<HostMetricsReader> logger,
@@ -86,7 +91,7 @@ public sealed class HostMetricsReader(
         }
 
         var drive = new DriveInfo(_options.DiskPath);
-        return new UsageBytes(drive.TotalSize - drive.AvailableFreeSpace, drive.TotalSize);
+        return new UsageBytes(drive.TotalSize - drive.TotalFreeSpace, drive.TotalSize);
     }
 
     private double? ReadTemperature()

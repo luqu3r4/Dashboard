@@ -19,8 +19,8 @@
                 @if (m?.CpuPercent is { } cpu)
                 {
                     <p class="display-6 mb-2">@cpu.ToString("0.0") %</p>
-                    <div class="progress" role="progressbar" aria-label="Uso de CPU" aria-valuenow="@((int)cpu)" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar" style="width: @((int)cpu)%"></div>
+                    <div class="progress" role="progressbar" aria-label="Uso de CPU" aria-valuenow="@Pct(cpu)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @Pct(cpu)%"></div>
                     </div>
                 }
                 else
@@ -37,8 +37,8 @@
                 @if (m?.Memory is { } mem)
                 {
                     <p class="display-6 mb-2">@MetricsFormat.Gigabytes(mem.Used) / @MetricsFormat.Gigabytes(mem.Total)</p>
-                    <div class="progress" role="progressbar" aria-label="Uso de memoria" aria-valuenow="@((int)mem.Percent)" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar" style="width: @((int)mem.Percent)%"></div>
+                    <div class="progress" role="progressbar" aria-label="Uso de memoria" aria-valuenow="@Pct(mem.Percent)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @Pct(mem.Percent)%"></div>
                     </div>
                 }
                 else
@@ -55,8 +55,8 @@
                 @if (m?.Disk is { } disk)
                 {
                     <p class="display-6 mb-2">@MetricsFormat.Gigabytes(disk.Used) / @MetricsFormat.Gigabytes(disk.Total)</p>
-                    <div class="progress" role="progressbar" aria-label="Uso de disco" aria-valuenow="@((int)disk.Percent)" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar" style="width: @((int)disk.Percent)%"></div>
+                    <div class="progress" role="progressbar" aria-label="Uso de disco" aria-valuenow="@Pct(disk.Percent)" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: @Pct(disk.Percent)%"></div>
                     </div>
                 }
                 else
@@ -100,6 +100,8 @@
 
 @code {
     private bool _disposed;
+
+    private static int Pct(double value) => (int)Math.Clamp(value, 0, 100);
 
     protected override void OnInitialized() => Sampler.Updated += OnUpdated;
 

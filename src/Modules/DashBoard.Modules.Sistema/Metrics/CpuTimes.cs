@@ -11,6 +11,6 @@ public readonly record struct CpuTimes(ulong Total, ulong Idle)
 
         var deltaTotal = (double)(Total - previous.Total);
         var deltaIdle = Idle >= previous.Idle ? (double)(Idle - previous.Idle) : 0.0;
-        return (1 - deltaIdle / deltaTotal) * 100;
+        return Math.Clamp((1 - deltaIdle / deltaTotal) * 100, 0, 100);
     }
 }

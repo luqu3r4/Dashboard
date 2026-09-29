@@ -14,8 +14,9 @@ public class ParserTests
         var ok = CpuStatParser.TryParse(Fixture("stat.txt"), out var times);
 
         Assert.True(ok);
-        // Suma a mano de: 10132153 290696 3084719 46828483 16683 0 25195 0 175628 0
-        Assert.Equal(60553557UL, times.Total);
+        // Suma a mano de los 8 primeros campos: 10132153 290696 3084719 46828483 16683 0 25195 0
+        // (guest y guest_nice ya están incluidos en user/nice, ver proc(5); no se suman de nuevo)
+        Assert.Equal(60377929UL, times.Total);
         // idle (46828483) + iowait (16683)
         Assert.Equal(46845166UL, times.Idle);
     }
@@ -34,6 +35,22 @@ public class ParserTests
         var usage = new CpuTimes(200, 150).UsagePercentSince(new CpuTimes(100, 100));
 
         Assert.Equal(50.0, usage);
+    }
+
+    [Fact]
+    public void CpuUsage_idle_decreciente_se_limita_a_100()
+    {
+        var usage = new CpuTimes(200, 40).UsagePercentSince(new CpuTimes(100, 50));
+
+        Assert.Equal(100.0, usage);
+    }
+
+    [Fact]
+    public void CpuUsage_idle_mayor_que_total_se_limita_a_0()
+    {
+        var usage = new CpuTimes(200, 250).UsagePercentSince(new CpuTimes(100, 100));
+
+        Assert.Equal(0.0, usage);
     }
 
     [Fact]

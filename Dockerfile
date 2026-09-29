@@ -13,6 +13,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# El contenedor monta el sistema de archivos del host en solo lectura; ejecutarlo sin root
+# limita lo que puede leer. /keys guarda las claves de Data Protection y debe ser escribible.
+RUN mkdir -p /keys && chown $APP_UID /keys
+USER $APP_UID
+
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "DashBoard.Web.dll"]

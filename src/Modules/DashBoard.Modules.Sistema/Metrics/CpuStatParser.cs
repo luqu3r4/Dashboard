@@ -36,7 +36,11 @@ public static class CpuStatParser
                 }
 
                 values[i - 1] = value;
-                total += value;
+                // Solo los 8 primeros campos: guest y guest_nice ya van incluidos en user/nice (proc(5)).
+                if (i <= 8)
+                {
+                    total += value;
+                }
             }
 
             times = new CpuTimes(total, values[3] + values[4]);
