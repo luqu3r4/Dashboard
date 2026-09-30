@@ -40,14 +40,27 @@ services:
   docker-proxy:
     image: tecnativa/docker-socket-proxy:v0.4.1
     environment:
-      # CONTAINERS=1 permite consultar (GET) la lista y el detalle de contenedores.
-      # Todo lo demás (imágenes, redes, volúmenes...) y cualquier escritura (POST, como
-      # parar o crear un contenedor) queda denegado y devuelve 403.
+      # CONTAINERS=1 permite solo peticiones GET sobre contenedores (lista, detalle,
+      # estadísticas, logs...; el detalle incluye las variables de entorno de cada
+      # contenedor). Cualquier escritura (POST/DELETE...) y las demás secciones (imágenes,
+      # redes, volúmenes...) devuelven 403; ping, version y events quedan permitidos por
+      # defecto.
       - CONTAINERS=1
+      # El proxy (HAProxy) registra por defecto una línea por cada petición, y el dashboard
+      # hace varias cada 2 segundos: llenaría el disco poco a poco. Con "warning" solo
+      # se registran los avisos y errores.
+      - LOG_LEVEL=warning
     volumes:
       # El socket de Docker es el "mando a distancia" del motor de Docker en el host.
-      # ":ro" lo monta de solo lectura.
+      # OJO: ":ro" no protege nada aquí: quien puede hablar con el socket controla Docker.
+      # La protección real es el filtrado del proxy (por eso el dashboard no monta el socket).
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Docker guarda los logs de cada contenedor en un fichero que por defecto nunca se
+    # rota y crece sin límite. Así se conservan como máximo 3 ficheros de 10 MB.
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     # No lleva "ports": no se publica ningún puerto hacia la máquina. Solo es accesible
     # desde la red interna de Compose (por los demás servicios), no desde fuera.
     restart: unless-stopped
