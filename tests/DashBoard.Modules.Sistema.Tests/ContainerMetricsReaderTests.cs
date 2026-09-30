@@ -19,9 +19,15 @@ public sealed class ContainerMetricsReaderTests
 
     private static HttpResponseMessage Status(HttpStatusCode code) => new(code);
 
-    private static ContainerMetricsReader CreateReader(FakeDockerHandler handler, string? url = "http://docker-proxy:2375")
+    private static ContainerMetricsReader CreateReader(FakeDockerHandler handler, string? url = "http://docker-proxy:2375", TimeSpan? timeout = null)
     {
-        var client = new DockerApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://docker-proxy:2375") });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://docker-proxy:2375") };
+        if (timeout is { } t)
+        {
+            http.Timeout = t;
+        }
+
+        var client = new DockerApiClient(http);
         return new ContainerMetricsReader(
             client,
             Options.Create(new SistemaOptions { DockerApiUrl = url }),
@@ -112,17 +118,47 @@ public sealed class ContainerMetricsReaderTests
     [Fact]
     public async Task Si_fallan_las_estadisticas_solo_ese_contenedor_pierde_metricas()
     {
-        var handler = new FakeDockerHandler(r =>
-            r.RequestUri!.PathAndQuery == StatsPath ? Status(HttpStatusCode.NotFound) : Healthy(r));
+        const string list = """
+            [
+              {"Id":"aaa111","Names":["/falla"],"Image":"a","State":"running"},
+              {"Id":"ddd444","Names":["/sano"],"Image":"d","State":"running"}
+            ]
+            """;
+        var handler = new FakeDockerHandler(r => r.RequestUri!.PathAndQuery switch
+        {
+            ListPath => Ok(list),
+            StatsPath => Status(HttpStatusCode.NotFound),
+            "/containers/ddd444/json" => Ok(Fixture("docker-inspect.json").Replace("aaa111", "ddd444")),
+            "/containers/ddd444/stats?stream=false&one-shot=true" => Ok(Fixture("docker-stats-cgroupv2.json")),
+            _ => Healthy(r),
+        });
         var reader = CreateReader(handler);
 
         var snapshot = await reader.ReadAsync(CancellationToken.None);
 
-        Assert.Equal(3, snapshot.Containers!.Count);
-        var running = snapshot.Containers.Single(c => c.Id == "aaa111");
-        Assert.Null(running.CpuPercent);
-        Assert.Null(running.Memory);
-        Assert.NotNull(running.Uptime);
+        Assert.Equal(2, snapshot.Containers!.Count);
+        var failing = snapshot.Containers.Single(c => c.Id == "aaa111");
+        Assert.Null(failing.CpuPercent);
+        Assert.Null(failing.Memory);
+        Assert.NotNull(failing.Uptime);
+        var healthy = snapshot.Containers.Single(c => c.Id == "ddd444");
+        Assert.NotNull(healthy.Memory);
+        Assert.NotNull(healthy.Uptime);
+    }
+
+    [Fact]
+    public async Task Timeout_del_proxy_da_no_disponible()
+    {
+        var handler = new FakeDockerHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), ct);
+            return Ok("[]");
+        });
+        var reader = CreateReader(handler, timeout: TimeSpan.FromMilliseconds(100));
+
+        var snapshot = await reader.ReadAsync(CancellationToken.None);
+
+        Assert.Null(snapshot.Containers);
     }
 
     [Fact]
