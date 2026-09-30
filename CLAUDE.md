@@ -24,6 +24,10 @@ de entrenamiento sincronizadas desde una app de ejercicio).
   `/host/root`) y configurados en la sección `Sistema` (`Sistema__ProcPath`,
   `Sistema__SysPath`, `Sistema__DiskPath`). El compose fija `LANG=es_ES.UTF-8`
   para el formato numérico en español.
+- El módulo Sistema también consulta los contenedores Docker a través del
+  servicio `docker-proxy` (`tecnativa/docker-socket-proxy`, solo lectura,
+  sin puertos publicados). La URL se configura con `Sistema__DockerApiUrl`
+  (`http://docker-proxy:2375`); vacía desactiva la sección de contenedores.
 
 ## Arquitectura: módulos independientes
 

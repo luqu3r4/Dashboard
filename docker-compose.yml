@@ -22,6 +22,34 @@ services:
       - Sistema__ProcPath=/host/proc
       - Sistema__SysPath=/host/sys
       - Sistema__DiskPath=/host/root
+      # URL desde donde el dashboard consulta los contenedores Docker. Usa el nombre del
+      # servicio "docker-proxy" como nombre de host: Compose crea una red interna y cada
+      # servicio se puede alcanzar por su nombre. Si se deja vacía, la sección de
+      # contenedores queda desactivada.
+      - Sistema__DockerApiUrl=http://docker-proxy:2375
+    # "depends_on" controla el orden de arranque: Compose inicia primero docker-proxy y
+    # después dashboard. OJO: solo espera a que el contenedor se haya arrancado, no a que
+    # el proxy esté listo para responder.
+    depends_on:
+      - docker-proxy
+    restart: unless-stopped
+
+  # Proxy de solo lectura hacia la API de Docker. En vez de darle al dashboard el socket
+  # de Docker (que permitiría crear, parar o borrar contenedores), solo este servicio lo
+  # toca y filtra las peticiones: el dashboard únicamente puede hacer consultas.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.1
+    environment:
+      # CONTAINERS=1 permite consultar (GET) la lista y el detalle de contenedores.
+      # Todo lo demás (imágenes, redes, volúmenes...) y cualquier escritura (POST, como
+      # parar o crear un contenedor) queda denegado y devuelve 403.
+      - CONTAINERS=1
+    volumes:
+      # El socket de Docker es el "mando a distancia" del motor de Docker en el host.
+      # ":ro" lo monta de solo lectura.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # No lleva "ports": no se publica ningún puerto hacia la máquina. Solo es accesible
+    # desde la red interna de Compose (por los demás servicios), no desde fuera.
     restart: unless-stopped
 
 volumes:
