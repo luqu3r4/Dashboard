@@ -1,0 +1,5 @@
+[
+  {"Id":"aaa111","Names":["/dashboard-dashboard-1"],"Image":"dashboard-dashboard","State":"running"},
+  {"Id":"bbb222","Names":["/viejo"],"Image":"nginx:1.27","State":"exited"},
+  {"Id":"ccc333","Names":["/inestable"],"Image":"redis:7","State":"restarting"}
+]

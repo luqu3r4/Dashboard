@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <None Include="Fixtures\*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
