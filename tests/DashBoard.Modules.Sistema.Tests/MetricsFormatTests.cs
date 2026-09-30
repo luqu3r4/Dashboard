@@ -31,6 +31,25 @@ public class MetricsFormatTests
     }
 
     [Theory]
+    [InlineData(157286400L, "150 MB")]
+    [InlineData(1073741823L, "1024 MB")]
+    [InlineData(1073741824L, "1,0 GB")]
+    [InlineData(8589934592L, "8,0 GB")]
+    public void Memory_MB_o_GB(long bytes, string esperado)
+    {
+        var anterior = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("es-ES");
+            Assert.Equal(esperado, MetricsFormat.Memory(bytes));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = anterior;
+        }
+    }
+
+    [Theory]
     [InlineData(69.9, "")]
     [InlineData(70, "text-warning")]
     [InlineData(84.9, "text-warning")]

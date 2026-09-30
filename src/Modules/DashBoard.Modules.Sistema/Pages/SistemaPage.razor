@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @inject HostMetricsSampler Sampler
+@inject ContainerMetricsSampler ContainerSampler
 
 <PageTitle>Sistema / Homelab</PageTitle>
 
@@ -98,12 +99,62 @@
     </div>
 </div>
 
+<h2 class="h5 mt-5 mb-3">Contenedores</h2>
+
+@{
+    var containers = ContainerSampler.Current?.Containers;
+}
+
+@if (containers is null)
+{
+    <p class="text-secondary">No disponible</p>
+}
+else if (containers.Count == 0)
+{
+    <p class="text-secondary">No hay contenedores</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Imagen</th>
+                    <th>Estado</th>
+                    <th>Tiempo activo</th>
+                    <th>CPU</th>
+                    <th>RAM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in ContainerDisplay.Sort(containers))
+                {
+                    var (label, css) = ContainerDisplay.Badge(c.State);
+                    <tr>
+                        <td>@c.Name</td>
+                        <td>@c.Image</td>
+                        <td><span class="badge @css">@label</span></td>
+                        <td>@(c.Uptime is { } up ? MetricsFormat.Uptime(up) : "—")</td>
+                        <td>@(c.CpuPercent is { } cpuPct ? $"{cpuPct:0.0} %" : "—")</td>
+                        <td>@(c.Memory is { } ram ? $"{MetricsFormat.Memory(ram.Used)} / {MetricsFormat.Memory(ram.Total)}" : "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
 @code {
     private bool _disposed;
 
     private static int Pct(double value) => (int)Math.Clamp(value, 0, 100);
 
-    protected override void OnInitialized() => Sampler.Updated += OnUpdated;
+    protected override void OnInitialized()
+    {
+        Sampler.Updated += OnUpdated;
+        ContainerSampler.Updated += OnUpdated;
+    }
 
     private void OnUpdated()
     {
@@ -132,5 +183,6 @@
     {
         _disposed = true;
         Sampler.Updated -= OnUpdated;
+        ContainerSampler.Updated -= OnUpdated;
     }
 }

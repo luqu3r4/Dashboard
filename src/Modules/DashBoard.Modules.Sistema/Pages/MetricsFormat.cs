@@ -4,6 +4,7 @@ namespace DashBoard.Modules.Sistema.Pages;
 
 public static class MetricsFormat
 {
+    private const double BytesPerMegabyte = 1024d * 1024d;
     private const double BytesPerGigabyte = 1024d * 1024d * 1024d;
 
     public static string Uptime(TimeSpan uptime)
@@ -23,6 +24,11 @@ public static class MetricsFormat
 
     public static string Gigabytes(long bytes) =>
         string.Create(CultureInfo.CurrentCulture, $"{bytes / BytesPerGigabyte:0.0} GB");
+
+    public static string Memory(long bytes) =>
+        bytes < BytesPerMegabyte * 1024
+            ? string.Create(CultureInfo.CurrentCulture, $"{bytes / BytesPerMegabyte:0} MB")
+            : Gigabytes(bytes);
 
     public static string TemperatureClass(double celsius) => celsius switch
     {
