@@ -1,0 +1,4 @@
+{
+  "cpu_stats": {"cpu_usage": {"total_usage": 2000000000}, "system_cpu_usage": 100000000000, "online_cpus": 4},
+  "memory_stats": {"usage": 209715200, "limit": 2147483648, "stats": {"total_inactive_file": 104857600}}
+}
