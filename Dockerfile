@@ -4,6 +4,7 @@ WORKDIR /src
 COPY src/DashBoard.Web/DashBoard.Web.csproj src/DashBoard.Web/
 COPY src/DashBoard.Core/DashBoard.Core.csproj src/DashBoard.Core/
 COPY src/Modules/DashBoard.Modules.Sistema/DashBoard.Modules.Sistema.csproj src/Modules/DashBoard.Modules.Sistema/
+COPY src/Modules/DashBoard.Modules.Salud/DashBoard.Modules.Salud.csproj src/Modules/DashBoard.Modules.Salud/
 RUN dotnet restore src/DashBoard.Web/DashBoard.Web.csproj
 
 COPY src/ src/

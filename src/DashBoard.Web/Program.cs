@@ -1,4 +1,5 @@
 using DashBoard.Core;
+using DashBoard.Modules.Salud;
 using DashBoard.Modules.Sistema;
 using DashBoard.Web;
 using DashBoard.Web.Components;
@@ -13,7 +14,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/keys"));
 
-IDashboardModule[] modules = [new SistemaModule()];
+IDashboardModule[] modules = [new SistemaModule(), new SaludModule()];
 foreach (var module in modules)
 {
     module.ConfigureServices(builder.Services, builder.Configuration);
