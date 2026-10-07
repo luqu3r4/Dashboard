@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace DashBoard.Modules.Salud.Api;
@@ -101,8 +100,9 @@ public sealed class SaludApiClient(HttpClient http, SaludOptions options)
                 return SaludResult<T>.Fail(SaludStatus.Unreachable);
             }
 
-            var data = await response.Content.ReadFromJsonAsync<T>(Json, ct);
-            return data is null
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var data = JsonSerializer.Deserialize<T>(body, Json);
+            return data is null || (data is System.Collections.IEnumerable items && items.Cast<object?>().Any(i => i is null))
                 ? SaludResult<T>.Fail(SaludStatus.InvalidResponse)
                 : SaludResult<T>.Ok(data);
         }

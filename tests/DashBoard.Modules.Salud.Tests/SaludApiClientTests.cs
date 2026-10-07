@@ -134,6 +134,29 @@ public class SaludApiClientTests
     }
 
     [Fact]
+    public async Task InvalidResponseOnNonJsonContentType()
+    {
+        var client = Create(new FakeSaludHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("<html>error</html>", Encoding.UTF8, "text/html"),
+        }));
+
+        var result = await client.GetDailyAsync("Steps", new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 2), CancellationToken.None);
+
+        Assert.Equal(SaludStatus.InvalidResponse, result.Status);
+    }
+
+    [Fact]
+    public async Task InvalidResponseOnNullArrayElement()
+    {
+        var client = Create(new FakeSaludHandler(_ => Json("[null]")));
+
+        var result = await client.GetDailyAsync("Steps", new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 2), CancellationToken.None);
+
+        Assert.Equal(SaludStatus.InvalidResponse, result.Status);
+    }
+
+    [Fact]
     public async Task GetWorkoutsMapsTitleAndMinutes()
     {
         const string body = """
