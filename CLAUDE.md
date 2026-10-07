@@ -46,9 +46,13 @@ que sirve el proyecto **SaludApi** (`../SaludApi`), consumiendo su endpoint
   `Salud__ApiUrl` (vacía = módulo no configurado), `Salud__ApiKey` y los
   objetivos opcionales `Salud__StepsPerDay`, `Salud__WorkoutsPerWeek`,
   `Salud__TargetWeightKg` (vacíos = sin objetivo).
-- **Secretos:** el compose las lee de `.env` (no versionado; plantilla en
-  `.env.example`): `SALUD_API_KEY` (= `SALUDAPI_QUERY_API_KEY` de SaludApi),
-  `SALUD_STEPS_PER_DAY`, `SALUD_WORKOUTS_PER_WEEK`, `SALUD_TARGET_WEIGHT_KG`.
+- **Zona horaria:** `Salud__TimeZone` (por defecto `Europe/Madrid`). Debe
+  coincidir con `Health__TimeZone` de SaludApi, que es quien agrupa los
+  datos por día.
+- **Variables en `.env`:** el compose las lee de `.env` (no versionado;
+  plantilla en `.env.example`): `SALUD_API_KEY` (= `SALUDAPI_QUERY_API_KEY`
+  de SaludApi; es el único secreto), `SALUD_STEPS_PER_DAY`,
+  `SALUD_WORKOUTS_PER_WEEK`, `SALUD_TARGET_WEIGHT_KG` (objetivos, no secretos).
 
 ## Arquitectura: módulos independientes
 

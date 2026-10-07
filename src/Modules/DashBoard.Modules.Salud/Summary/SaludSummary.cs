@@ -41,7 +41,7 @@ public static class SaludSummary
             return null;
         }
 
-        var reference = weights.Where(d => d.Date <= today.AddDays(-30)).OrderByDescending(d => d.Date).FirstOrDefault();
+        var reference = weights.Where(d => d.Date <= today.AddDays(-30) && d.Date < current.Date).OrderByDescending(d => d.Date).FirstOrDefault();
         double? change = reference is null ? null : Math.Round(current.Value - reference.Value, 2);
         double? distance = targetKg is null ? null : Math.Round(current.Value - targetKg.Value, 2);
         return new WeightStats(current.Value, current.Date, change, distance);

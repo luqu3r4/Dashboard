@@ -80,6 +80,17 @@ public class SaludSummaryTests
     }
 
     [Fact]
+    public void WeightOnlyOlderThan30DaysHasNoChange()
+    {
+        var today = new DateOnly(2026, 10, 6);
+
+        var stats = SaludSummary.Weight([D("2026-08-27", 86.4)], today, null)!;
+
+        Assert.Equal(86.4, stats.CurrentKg);
+        Assert.Null(stats.ChangeOver30Days);
+    }
+
+    [Fact]
     public void WeightWithoutOldMeasurementHasNoChange()
     {
         var today = new DateOnly(2026, 10, 6);

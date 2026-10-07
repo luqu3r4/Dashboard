@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @using System.Globalization
+@using DashBoard.Modules.Salud
 @using DashBoard.Modules.Salud.Api
 @using DashBoard.Modules.Salud.Charts
 @using DashBoard.Modules.Salud.Summary
@@ -9,7 +10,7 @@
 @inject SaludApiClient Api
 @inject IOptions<SaludOptions> Options
 @inject TimeProvider Time
-@inject TimeZoneInfo Zone
+@inject SaludZone Zone
 
 <PageTitle>Salud</PageTitle>
 
@@ -70,7 +71,7 @@ else
                     <h2 class="h6 text-secondary"><i class="bi bi-lightning-charge me-2"></i>Entrenos esta semana</h2>
                     @if (_week is { } w)
                     {
-                        <p class="display-6 mb-0">@(w.Goal is { } g ? $"{w.Count} / {g}" : w.Count.ToString(Es))</p>
+                        <p class="display-6 mb-0">@(Positive(w.Goal) is { } g ? $"{w.Count} / {g}" : w.Count.ToString(Es))</p>
                     }
                 </div>
             </div>
@@ -81,14 +82,21 @@ else
                     <h2 class="h6 text-secondary"><i class="bi bi-speedometer2 me-2"></i>Peso</h2>
                     @if (_weight is { } wt)
                     {
-                        <p class="display-6 mb-1">@wt.CurrentKg.ToString("N1", Es) kg</p>
+                        <p class="display-6 mb-1">@wt.CurrentKg.ToString("N1", Es) kg@if (wt.Date != _todayDate)
+                            {
+                                <small class="text-secondary fs-6"> (@wt.Date.ToString("dd/MM", Es))</small>
+                            }</p>
                         @if (wt.ChangeOver30Days is { } ch)
                         {
                             <small class="d-block text-secondary">@(ch > 0 ? "+" : "")@ch.ToString("N1", Es) kg en 30 días</small>
                         }
-                        @if (Options.Value.TargetWeightKg is { } target)
+                        @if (PositiveKg(Options.Value.TargetWeightKg) is { } target)
                         {
                             <small class="d-block text-secondary">obj. @target.ToString("N1", Es) kg</small>
+                            @if (wt.DistanceToTarget is { } dist)
+                            {
+                                <small class="d-block text-secondary">@(dist > 0 ? $"a {dist.ToString("N1", Es)} kg del objetivo" : "objetivo alcanzado")</small>
+                            }
                         }
                     }
                     else
@@ -132,7 +140,7 @@ else
             <div class="card">
                 <div class="card-body">
                     <h2 class="h6 text-secondary">Peso</h2>
-                    <LineChart Points="_weightSeries" Goal="Options.Value.TargetWeightKg" />
+                    <LineChart Points="_weightSeries" Goal="@PositiveKg(Options.Value.TargetWeightKg)" />
                 </div>
             </div>
         </div>
@@ -202,14 +210,16 @@ else
 
     private static int? Positive(int? value) => value is > 0 ? value : null;
 
+    private static double? PositiveKg(double? value) => value is > 0 ? value : null;
+
     private string LocalDate(DateTimeOffset start) =>
-        TimeZoneInfo.ConvertTime(start, Zone).ToString("ddd dd/MM", Es);
+        TimeZoneInfo.ConvertTime(start, Zone.Zone).ToString("ddd dd/MM", Es);
 
     protected override async Task OnInitializedAsync()
     {
         var opts = Options.Value;
         var ct = _cts.Token;
-        var today = _todayDate = SaludClock.Today(Time, Zone);
+        var today = _todayDate = SaludClock.Today(Time, Zone.Zone);
         var (from, to) = SaludSummary.Range(_period, today);
         var version = ++_version;
 

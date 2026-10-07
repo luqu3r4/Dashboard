@@ -6,6 +6,9 @@ using Microsoft.Extensions.Options;
 
 namespace DashBoard.Modules.Salud;
 
+/// <summary>Zona horaria del módulo; tipo propio para no registrar un <see cref="TimeZoneInfo"/> suelto en el contenedor compartido.</summary>
+public sealed record SaludZone(TimeZoneInfo Zone);
+
 public sealed class SaludModule : DashBoard.Core.IDashboardModule
 {
     public string Title => "Salud";
@@ -20,7 +23,7 @@ public sealed class SaludModule : DashBoard.Core.IDashboardModule
         services.AddSingleton(sp =>
         {
             var zone = sp.GetRequiredService<IOptions<SaludOptions>>().Value.TimeZone;
-            return TimeZoneInfo.FindSystemTimeZoneById(zone);
+            return new SaludZone(TimeZoneInfo.FindSystemTimeZoneById(zone));
         });
 
         // Cliente propio (sin IHttpClientFactory), igual que el de Docker en el módulo Sistema.
