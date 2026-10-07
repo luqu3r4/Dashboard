@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Configuration;
+using DashBoard.Modules.Salud.Api;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace DashBoard.Modules.Salud;
 
@@ -13,5 +16,27 @@ public sealed class SaludModule : DashBoard.Core.IDashboardModule
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SaludOptions>(configuration.GetSection(SaludOptions.SectionName));
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(sp =>
+        {
+            var zone = sp.GetRequiredService<IOptions<SaludOptions>>().Value.TimeZone;
+            return TimeZoneInfo.FindSystemTimeZoneById(zone);
+        });
+
+        // Cliente propio (sin IHttpClientFactory), igual que el de Docker en el módulo Sistema.
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<SaludOptions>>().Value;
+            var http = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(1) })
+            {
+                Timeout = TimeSpan.FromSeconds(5),
+            };
+            if (!string.IsNullOrWhiteSpace(options.ApiUrl))
+            {
+                http.BaseAddress = new Uri(options.ApiUrl);
+            }
+
+            return new SaludApiClient(http, options);
+        });
     }
 }
