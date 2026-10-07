@@ -1,0 +1,46 @@
+@using DashBoard.Modules.Salud.Summary
+@using static DashBoard.Modules.Salud.Charts.ChartGeometry
+
+@if (Points.Count == 0)
+{
+    <p class="text-secondary mb-0">Sin datos</p>
+}
+else
+{
+    var scale = BarScale(Points.Select(p => p.Value).ToList(), Goal);
+    var plotWidth = Width - Left - Right;
+    var plotHeight = Height - Top - Bottom;
+    var barWidth = ChartGeometry.BarWidth(Points.Count, plotWidth);
+
+    <svg viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="xMidYMid meet" role="img" style="max-width:100%;height:auto">
+        <line x1="@N(Left)" y1="@N(Top + plotHeight)" x2="@N(Left + plotWidth)" y2="@N(Top + plotHeight)" stroke="var(--bs-secondary-color)" stroke-width="1" opacity="0.5" />
+        <text x="@N(Left - 4)" y="@N(Top + 4)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Format(scale.Max)</text>
+        <text x="@N(Left - 4)" y="@N(Top + plotHeight)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">0</text>
+        @for (var i = 0; i < Points.Count; i++)
+        {
+            var point = Points[i];
+            var y = Y(point.Value, scale, plotHeight);
+            <rect x="@N(Left + X(i, Points.Count, plotWidth))" y="@N(Top + y)" width="@N(barWidth)" height="@N(plotHeight - y)" fill="var(--bs-primary)">
+                <title>@point.Tooltip</title>
+            </rect>
+        }
+        @if (Goal is { } goal)
+        {
+            var gy = Top + Y(goal, scale, plotHeight);
+            <line x1="@N(Left)" y1="@N(gy)" x2="@N(Left + plotWidth)" y2="@N(gy)" stroke="var(--bs-secondary-color)" stroke-width="1.5" stroke-dasharray="6 4" />
+        }
+        @foreach (var i in LabelIndexes(Points.Count, MaxLabels))
+        {
+            <g><text x="@N(Left + X(i, Points.Count, plotWidth) + barWidth / 2)" y="@N(Height - 6)" text-anchor="middle" font-size="11" fill="var(--bs-secondary-color)">@Points[i].Label</text></g>
+        }
+    </svg>
+}
+
+@code {
+    private const double Width = 600, Height = 240, Left = 44, Right = 8, Top = 10, Bottom = 26;
+    private const int MaxLabels = 8;
+
+    [Parameter] public IReadOnlyList<ChartPoint> Points { get; set; } = [];
+
+    [Parameter] public double? Goal { get; set; }
+}

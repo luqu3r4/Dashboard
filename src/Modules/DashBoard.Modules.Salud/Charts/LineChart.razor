@@ -1,0 +1,49 @@
+@using DashBoard.Modules.Salud.Summary
+@using static DashBoard.Modules.Salud.Charts.ChartGeometry
+
+@if (Points.Count == 0)
+{
+    <p class="text-secondary mb-0">Sin datos</p>
+}
+else
+{
+    var scale = LineScale(Points.Select(p => p.Value).ToList(), Goal);
+    var plotWidth = Width - Left - Right;
+    var plotHeight = Height - Top - Bottom;
+    var barWidth = ChartGeometry.BarWidth(Points.Count, plotWidth);
+    // Los puntos se centran en su hueco, igual que las barras.
+    var xs = Enumerable.Range(0, Points.Count).Select(i => Left + X(i, Points.Count, plotWidth) + barWidth / 2).ToList();
+    var ys = Points.Select(p => Top + Y(p.Value, scale, plotHeight)).ToList();
+    var path = string.Join(" ", xs.Select((x, i) => N(x) + "," + N(ys[i])));
+
+    <svg viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="xMidYMid meet" role="img" style="max-width:100%;height:auto">
+        <line x1="@N(Left)" y1="@N(Top + plotHeight)" x2="@N(Left + plotWidth)" y2="@N(Top + plotHeight)" stroke="var(--bs-secondary-color)" stroke-width="1" opacity="0.5" />
+        <text x="@N(Left - 4)" y="@N(Top + 4)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Format(scale.Max)</text>
+        <text x="@N(Left - 4)" y="@N(Top + plotHeight)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Format(scale.Min)</text>
+        @if (Goal is { } goal)
+        {
+            var gy = Top + Y(goal, scale, plotHeight);
+            <line x1="@N(Left)" y1="@N(gy)" x2="@N(Left + plotWidth)" y2="@N(gy)" stroke="var(--bs-secondary-color)" stroke-width="1.5" stroke-dasharray="6 4" />
+        }
+        <polyline points="@path" fill="none" stroke="var(--bs-primary)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        @for (var i = 0; i < Points.Count; i++)
+        {
+            <circle cx="@N(xs[i])" cy="@N(ys[i])" r="@(Points.Count > 40 ? "2" : "3.5")" fill="var(--bs-primary)">
+                <title>@Points[i].Tooltip</title>
+            </circle>
+        }
+        @foreach (var i in LabelIndexes(Points.Count, MaxLabels))
+        {
+            <g><text x="@N(xs[i])" y="@N(Height - 6)" text-anchor="middle" font-size="11" fill="var(--bs-secondary-color)">@Points[i].Label</text></g>
+        }
+    </svg>
+}
+
+@code {
+    private const double Width = 600, Height = 240, Left = 44, Right = 8, Top = 10, Bottom = 26;
+    private const int MaxLabels = 8;
+
+    [Parameter] public IReadOnlyList<ChartPoint> Points { get; set; } = [];
+
+    [Parameter] public double? Goal { get; set; }
+}
