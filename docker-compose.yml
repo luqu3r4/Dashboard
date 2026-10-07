@@ -27,11 +27,27 @@ services:
       # servicio se puede alcanzar por su nombre. Si se deja vacía, la sección de
       # contenedores queda desactivada.
       - Sistema__DockerApiUrl=http://docker-proxy:2375
+      # Módulo Salud: SaludApi se alcanza por su nombre de servicio a través de la red
+      # compartida "homelab" (ver más abajo). La clave se lee del fichero ".env" (no
+      # versionado). Si Salud__ApiUrl se deja vacía, el módulo muestra que no está configurado.
+      - Salud__ApiUrl=http://saludapi:8080
+      - Salud__ApiKey=${SALUD_API_KEY}
+      # Objetivos opcionales: si la variable no está definida en ".env", queda vacía y el
+      # objetivo se desactiva. ":-" significa "usa este valor por defecto (vacío) si falta".
+      - Salud__StepsPerDay=${SALUD_STEPS_PER_DAY:-}
+      - Salud__WorkoutsPerWeek=${SALUD_WORKOUTS_PER_WEEK:-}
+      - Salud__TargetWeightKg=${SALUD_TARGET_WEIGHT_KG:-}
     # "depends_on" controla el orden de arranque: Compose inicia primero docker-proxy y
     # después dashboard. OJO: solo espera a que el contenedor se haya arrancado, no a que
     # el proxy esté listo para responder.
     depends_on:
       - docker-proxy
+    # Además de su red propia (default, donde habla con docker-proxy), se une a la red
+    # compartida "homelab" para poder llamar a SaludApi como http://saludapi:8080.
+    # Solo dashboard la usa; docker-proxy sigue aislado en la red por defecto.
+    networks:
+      - default
+      - homelab
     restart: unless-stopped
 
   # Proxy de solo lectura hacia la API de Docker. En vez de darle al dashboard el socket
@@ -67,3 +83,10 @@ services:
 
 volumes:
   dataprotection-keys:
+
+networks:
+  # Una red "externa" no la crea este compose: ya debe existir. Así varios
+  # proyectos (cada uno con su docker-compose.yml) pueden compartirla.
+  # Se crea una sola vez con: docker network create homelab
+  homelab:
+    external: true

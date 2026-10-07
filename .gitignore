@@ -6,3 +6,6 @@ obj/
 
 # Docker
 docker-compose.override.yml
+
+# Secretos locales
+.env

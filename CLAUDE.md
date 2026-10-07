@@ -29,6 +29,27 @@ de entrenamiento sincronizadas desde una app de ejercicio).
   sin puertos publicados). La URL se configura con `Sistema__DockerApiUrl`
   (`http://docker-proxy:2375`); vacía desactiva la sección de contenedores.
 
+## Módulo Salud
+
+Muestra los datos de salud/fitness (pasos, distancia, peso, entrenamientos)
+que sirve el proyecto **SaludApi** (`../SaludApi`), consumiendo su endpoint
+`GET /api/health-records/daily`.
+
+- **Dependencia de SaludApi:** debe estar levantada. Si no responde, la
+  página `/salud` muestra "No se puede conectar con SaludApi." y el resto del
+  DashBoard sigue funcionando.
+- **Red `homelab`:** red Docker externa compartida con SaludApi. Solo el
+  servicio `dashboard` se une a ella (además de la `default`); SaludApi se
+  alcanza como `http://saludapi:8080`. Hay que crearla una vez con
+  `docker network create homelab` antes del primer `docker compose up`.
+- **Configuración** (sección `Salud`, variables `Salud__X`):
+  `Salud__ApiUrl` (vacía = módulo no configurado), `Salud__ApiKey` y los
+  objetivos opcionales `Salud__StepsPerDay`, `Salud__WorkoutsPerWeek`,
+  `Salud__TargetWeightKg` (vacíos = sin objetivo).
+- **Secretos:** el compose las lee de `.env` (no versionado; plantilla en
+  `.env.example`): `SALUD_API_KEY` (= `SALUDAPI_QUERY_API_KEY` de SaludApi),
+  `SALUD_STEPS_PER_DAY`, `SALUD_WORKOUTS_PER_WEEK`, `SALUD_TARGET_WEIGHT_KG`.
+
 ## Arquitectura: módulos independientes
 
 DashBoard es una aplicación (`DashBoard.Web`) a la que se le van agregando
@@ -69,8 +90,8 @@ Esto permite añadir o quitar módulos sin que se afecten entre sí. El test
 - Tests: `dotnet test DashBoard.sln`
 - Ejecutar en local: `dotnet run --project src/DashBoard.Web`
 - Docker: `docker compose up --build` → http://localhost:8080
-  (los comandos de Docker que despliegan los ejecuta el usuario; Claude
-  los explica).
+  (Claude puede ejecutar los comandos de Docker que despliegan,
+  explicándolos).
 
 ## Documentos de Superpowers
 
