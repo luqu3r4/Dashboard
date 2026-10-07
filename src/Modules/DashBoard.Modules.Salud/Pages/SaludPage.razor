@@ -1,6 +1,343 @@
 @page "/salud"
 @rendermode InteractiveServer
+@implements IDisposable
+@using System.Globalization
+@using DashBoard.Modules.Salud.Api
+@using DashBoard.Modules.Salud.Charts
+@using DashBoard.Modules.Salud.Summary
+@using Microsoft.Extensions.Options
+@inject SaludApiClient Api
+@inject IOptions<SaludOptions> Options
+@inject TimeProvider Time
+@inject TimeZoneInfo Zone
 
 <PageTitle>Salud</PageTitle>
 
 <h1 class="h3 mb-4">Salud</h1>
+
+@if (_message is not null)
+{
+    <div class="alert alert-warning" role="alert">@_message</div>
+}
+else if (!_loaded)
+{
+    <p class="text-secondary" role="status">Cargando…</p>
+}
+else
+{
+    <h2 class="h5 mb-3">Hoy y esta semana</h2>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary"><i class="bi bi-person-walking me-2"></i>Pasos hoy</h2>
+                    @if (_today is { Steps: > 0 } t)
+                    {
+                        <p class="display-6 mb-2">@t.Steps.ToString("N0", Es)</p>
+                        @if (t.StepsGoalPercent is { } pct)
+                        {
+                            <div class="progress" role="progressbar" aria-label="Progreso de pasos" aria-valuenow="@Pct(pct)" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: @Pct(pct)%"></div>
+                            </div>
+                            <small class="text-secondary">obj. @Options.Value.StepsPerDay!.Value.ToString("N0", Es)</small>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary"><i class="bi bi-geo-alt me-2"></i>Distancia hoy</h2>
+                    @if (_today is { Km: > 0 } d)
+                    {
+                        <p class="display-6 mb-0">@d.Km.ToString("N1", Es) km</p>
+                    }
+                    else
+                    {
+                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary"><i class="bi bi-lightning-charge me-2"></i>Entrenos esta semana</h2>
+                    @if (_week is { } w)
+                    {
+                        <p class="display-6 mb-0">@(w.Goal is { } g ? $"{w.Count} / {g}" : w.Count.ToString(Es))</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary"><i class="bi bi-speedometer2 me-2"></i>Peso</h2>
+                    @if (_weight is { } wt)
+                    {
+                        <p class="display-6 mb-1">@wt.CurrentKg.ToString("N1", Es) kg</p>
+                        @if (wt.ChangeOver30Days is { } ch)
+                        {
+                            <small class="d-block text-secondary">@(ch > 0 ? "+" : "")@ch.ToString("N1", Es) kg en 30 días</small>
+                        }
+                        @if (Options.Value.TargetWeightKg is { } target)
+                        {
+                            <small class="d-block text-secondary">obj. @target.ToString("N1", Es) kg</small>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-5 mb-3">
+        <h2 class="h5 mb-0">Evolución</h2>
+        <div class="btn-group" role="group" aria-label="Periodo">
+            @foreach (var (p, label) in Periods)
+            {
+                <button type="button" class="btn btn-sm @(_period == p ? "btn-primary" : "btn-outline-secondary")" disabled="@_loading" @onclick="() => SelectPeriod(p)">@label</button>
+            }
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="text-secondary" role="status">Cargando…</p>
+    }
+
+    <div class="row row-cols-1 g-3">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary">@(_period == Period.Year ? "Pasos por día (media semanal)" : "Pasos por día")</h2>
+                    <BarChart Points="_stepsSeries" Goal="@Positive(Options.Value.StepsPerDay)" />
+                    @if (Positive(Options.Value.StepsPerDay) is { } stepsGoal)
+                    {
+                        <small class="text-secondary">obj. @stepsGoal.ToString("N0", Es)</small>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary">Peso</h2>
+                    <LineChart Points="_weightSeries" Goal="Options.Value.TargetWeightKg" />
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h6 text-secondary">Entrenos por semana</h2>
+                    <BarChart Points="_workoutSeries" Goal="@Positive(Options.Value.WorkoutsPerWeek)" />
+                    @if (Positive(Options.Value.WorkoutsPerWeek) is { } workoutsGoal)
+                    {
+                        <small class="text-secondary">obj. @workoutsGoal.ToString("N0", Es)</small>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="h5 mt-5 mb-3">Últimos entrenamientos</h2>
+    @if (_latest.Count == 0)
+    {
+        <p class="text-secondary">@SaludMessages.NoData</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var workout in _latest)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                    <span><span class="text-secondary me-2">@LocalDate(workout.Start)</span>@workout.Title</span>
+                    <span class="text-secondary">@workout.Minutes.ToString("N0", Es) min</span>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private static readonly CultureInfo Es = new("es-ES");
+
+    private static readonly (Period Period, string Label)[] Periods =
+    [
+        (Period.Days30, "30 días"),
+        (Period.Days90, "90 días"),
+        (Period.Year, "1 año"),
+    ];
+
+    /// <summary>Rango máximo (días, inclusivo) que admite el endpoint diario de SaludApi.</summary>
+    private const int MaxRangeDays = 366;
+
+    private readonly CancellationTokenSource _cts = new();
+    private int _version;
+    private bool _loaded;
+    private bool _loading;
+    private string? _message;
+    private Period _period = Period.Days30;
+    private DateOnly _todayDate;
+
+    private TodayStats? _today;
+    private WeekWorkouts? _week;
+    private WeightStats? _weight;
+    private IReadOnlyList<Workout> _latest = [];
+    private IReadOnlyList<ChartPoint> _stepsSeries = [];
+    private IReadOnlyList<ChartPoint> _weightSeries = [];
+    private IReadOnlyList<ChartPoint> _workoutSeries = [];
+
+    private static int Pct(double value) => (int)Math.Clamp(value, 0, 100);
+
+    private static int? Positive(int? value) => value is > 0 ? value : null;
+
+    private string LocalDate(DateTimeOffset start) =>
+        TimeZoneInfo.ConvertTime(start, Zone).ToString("ddd dd/MM", Es);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var opts = Options.Value;
+        var ct = _cts.Token;
+        var today = _todayDate = SaludClock.Today(Time, Zone);
+        var (from, to) = SaludSummary.Range(_period, today);
+        var version = ++_version;
+
+        var stepsToday = Api.GetDailyAsync("Steps", today, today, ct);
+        var distanceToday = Api.GetDailyAsync("Distance", today, today, ct);
+        var sessionsWeek = Api.GetDailyAsync("ExerciseSession", SaludSummary.MondayOf(today), today, ct);
+        var weightsYear = Api.GetDailyAsync("Weight", today.AddDays(-365), today, ct);
+        var workouts = Api.GetWorkoutsAsync(Time.GetUtcNow().AddDays(-90), ct);
+        var evolution = LoadEvolutionAsync(_period, from, to, ct);
+
+        try
+        {
+            await Task.WhenAll(stepsToday, distanceToday, sessionsWeek, weightsYear, workouts, evolution);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        var evo = evolution.Result;
+        _message = SaludMessages.For(
+            new[]
+            {
+                stepsToday.Result.Status, distanceToday.Result.Status, sessionsWeek.Result.Status,
+                weightsYear.Result.Status, workouts.Result.Status,
+            }.Concat(evo.Statuses));
+        _loaded = true;
+        if (_message is not null)
+        {
+            return;
+        }
+
+        _today = SaludSummary.Today(stepsToday.Result.Data!, distanceToday.Result.Data!, today, opts.StepsPerDay);
+        _week = SaludSummary.CurrentWeek(sessionsWeek.Result.Data!, today, opts.WorkoutsPerWeek);
+        _weight = SaludSummary.Weight(weightsYear.Result.Data!, today, opts.TargetWeightKg);
+        _latest = SaludSummary.Latest(workouts.Result.Data!);
+        ApplyEvolution(evo, version);
+    }
+
+    private async Task SelectPeriod(Period period)
+    {
+        if (period == _period || _loading)
+        {
+            return;
+        }
+
+        _period = period;
+        _loading = true;
+        var version = ++_version;
+        var (from, to) = SaludSummary.Range(period, _todayDate);
+        Evolution evo;
+        try
+        {
+            evo = await LoadEvolutionAsync(period, from, to, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        _loading = false;
+        _message = SaludMessages.For(evo.Statuses);
+        if (_message is null)
+        {
+            ApplyEvolution(evo, version);
+        }
+    }
+
+    private sealed record Evolution(
+        Period Period, DateOnly From, DateOnly To,
+        SaludResult<IReadOnlyList<DailyValue>> Steps, SaludResult<IReadOnlyList<DailyValue>> Distance,
+        SaludResult<IReadOnlyList<DailyValue>> Weights, SaludResult<IReadOnlyList<DailyValue>> Sessions)
+    {
+        public IEnumerable<SaludStatus> Statuses => [Steps.Status, Distance.Status, Weights.Status, Sessions.Status];
+    }
+
+    private async Task<Evolution> LoadEvolutionAsync(Period period, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        var steps = Api.GetDailyAsync("Steps", from, to, ct);
+        var distance = Api.GetDailyAsync("Distance", from, to, ct);
+        var weights = Api.GetDailyAsync("Weight", from, to, ct);
+        // Las semanas empiezan en lunes, así que las sesiones se piden desde el lunes de `from`.
+        var sessions = GetSessionsAsync(SaludSummary.MondayOf(from), to, ct);
+        await Task.WhenAll(steps, distance, weights, sessions);
+        return new Evolution(period, from, to, steps.Result, distance.Result, weights.Result, sessions.Result);
+    }
+
+    /// <summary>Sesiones diarias; si el rango supera el máximo de la API (1 año + días hasta el lunes) se divide en dos llamadas.</summary>
+    private async Task<SaludResult<IReadOnlyList<DailyValue>>> GetSessionsAsync(DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        if (to.DayNumber - from.DayNumber + 1 <= MaxRangeDays)
+        {
+            return await Api.GetDailyAsync("ExerciseSession", from, to, ct);
+        }
+
+        var split = to.AddDays(-(MaxRangeDays - 1));
+        var early = Api.GetDailyAsync("ExerciseSession", from, split.AddDays(-1), ct);
+        var late = Api.GetDailyAsync("ExerciseSession", split, to, ct);
+        await Task.WhenAll(early, late);
+        if (early.Result.Status != SaludStatus.Ok)
+        {
+            return early.Result;
+        }
+
+        if (late.Result.Status != SaludStatus.Ok)
+        {
+            return late.Result;
+        }
+
+        IReadOnlyList<DailyValue> all = [.. early.Result.Data!, .. late.Result.Data!];
+        return SaludResult<IReadOnlyList<DailyValue>>.Ok(all);
+    }
+
+    private void ApplyEvolution(Evolution evo, int version)
+    {
+        if (version != _version)
+        {
+            return;
+        }
+
+        _stepsSeries = SaludSummary.StepsSeries(evo.Steps.Data!, evo.Distance.Data!, evo.From, evo.To, evo.Period);
+        _weightSeries = SaludSummary.WeightSeries(evo.Weights.Data!);
+        _workoutSeries = SaludSummary.WorkoutsPerWeek(evo.Sessions.Data!, evo.From, evo.To);
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
