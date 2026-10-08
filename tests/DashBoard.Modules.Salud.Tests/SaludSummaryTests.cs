@@ -196,4 +196,40 @@ public class SaludSummaryTests
 
         Assert.Equal(["W7", "W6", "W5", "W4", "W3"], latest.Select(w => w.Title).ToArray());
     }
+
+    [Fact]
+    public void WeekKmSumsDistanceFromMondayToToday()
+    {
+        // Hoy miércoles 07/10/2026: cuentan lunes 05 y martes 06 y hoy; el domingo 04 no.
+        var distance = new[] { D("2026-10-04", 9000), D("2026-10-05", 5000), D("2026-10-06", 2500), D("2026-10-07", 1200) };
+
+        Assert.Equal(8.7, SaludSummary.WeekKm(distance, new DateOnly(2026, 10, 7)), 6);
+    }
+
+    [Fact]
+    public void WeekKmWithoutDataIsZero()
+    {
+        Assert.Equal(0, SaludSummary.WeekKm([], new DateOnly(2026, 10, 7)));
+    }
+
+    [Theory]
+    [InlineData(-0.8, 82.0, WeightTrend.Good)]   // por encima del objetivo y bajando
+    [InlineData(1.2, 82.0, WeightTrend.Bad)]     // por encima del objetivo y subiendo
+    [InlineData(1.2, 95.0, WeightTrend.Good)]    // por debajo del objetivo y subiendo
+    [InlineData(1.2, null, WeightTrend.Neutral)] // sin objetivo
+    [InlineData(0.0, 82.0, WeightTrend.Neutral)] // sin cambio
+    public void TrendComparesChangeWithTarget(double change, double? target, WeightTrend expected)
+    {
+        var stats = new WeightStats(88.3, new DateOnly(2026, 10, 6), change, target is null ? null : 88.3 - target);
+
+        Assert.Equal(expected, SaludSummary.Trend(stats));
+    }
+
+    [Fact]
+    public void TrendWithoutChangeIsNeutral()
+    {
+        var stats = new WeightStats(88.3, new DateOnly(2026, 10, 6), null, 6.3);
+
+        Assert.Equal(WeightTrend.Neutral, SaludSummary.Trend(stats));
+    }
 }

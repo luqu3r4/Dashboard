@@ -7,43 +7,49 @@
 }
 else
 {
-    var scale = LineScale(Points.Select(p => p.Value).ToList(), Goal);
+    var axis = NiceAxis(LineScale(Points.Select(p => p.Value).ToList(), Goal));
     var plotWidth = Width - Left - Right;
     var plotHeight = Height - Top - Bottom;
-    var barWidth = ChartGeometry.BarWidth(Points.Count, plotWidth);
-    // Los puntos se centran en su hueco, igual que las barras.
-    var xs = Enumerable.Range(0, Points.Count).Select(i => Left + X(i, Points.Count, plotWidth) + barWidth / 2).ToList();
-    var ys = Points.Select(p => Top + Y(p.Value, scale, plotHeight)).ToList();
+    var slot = plotWidth / Points.Count;
+    // Cada punto se centra en su hueco, como las barras.
+    var xs = Enumerable.Range(0, Points.Count).Select(i => Left + i * slot + slot / 2).ToList();
+    var ys = Points.Select(p => Top + Y(p.Value, axis.Scale, plotHeight)).ToList();
     var path = string.Join(" ", xs.Select((x, i) => N(x) + "," + N(ys[i])));
 
-    <svg viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="xMidYMid meet" role="img" style="max-width:100%;height:auto">
-        <line x1="@N(Left)" y1="@N(Top + plotHeight)" x2="@N(Left + plotWidth)" y2="@N(Top + plotHeight)" stroke="var(--bs-secondary-color)" stroke-width="1" opacity="0.5" />
-        <text x="@N(Left - 4)" y="@N(Top + 4)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Format(scale.Max)</text>
-        <text x="@N(Left - 4)" y="@N(Top + plotHeight)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Format(scale.Min)</text>
+    <svg viewBox="0 0 @Width @Height" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="@AriaLabel" style="max-width:100%;height:auto">
+        @foreach (var tick in axis.Ticks)
+        {
+            var ty = Top + Y(tick, axis.Scale, plotHeight);
+            <line x1="@N(Left)" y1="@N(ty)" x2="@N(Left + plotWidth)" y2="@N(ty)" stroke="var(--bs-border-color)" stroke-width="1" />
+            <g><text x="@N(Left - 6)" y="@N(ty + 4)" text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">@Compact(tick)</text></g>
+        }
         @if (Goal is { } goal)
         {
-            var gy = Top + Y(goal, scale, plotHeight);
+            var gy = Top + Y(goal, axis.Scale, plotHeight);
             <line x1="@N(Left)" y1="@N(gy)" x2="@N(Left + plotWidth)" y2="@N(gy)" stroke="var(--bs-secondary-color)" stroke-width="1.5" stroke-dasharray="6 4" />
+            <g><text x="@N(Left + plotWidth + 4)" y="@N(gy + 4)" font-size="11" fill="var(--bs-secondary-color)">obj.</text></g>
         }
         <polyline points="@path" fill="none" stroke="var(--bs-primary)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
         @for (var i = 0; i < Points.Count; i++)
         {
-            <circle cx="@N(xs[i])" cy="@N(ys[i])" r="@(Points.Count > 40 ? "2" : "3.5")" fill="var(--bs-primary)">
+            <circle cx="@N(xs[i])" cy="@N(ys[i])" r="@(Points.Count > 40 ? "2" : "3")" fill="var(--bs-primary)">
                 <title>@Points[i].Tooltip</title>
             </circle>
         }
         @foreach (var i in LabelIndexes(Points.Count, MaxLabels))
         {
-            <g><text x="@N(xs[i])" y="@N(Height - 6)" text-anchor="middle" font-size="11" fill="var(--bs-secondary-color)">@Points[i].Label</text></g>
+            <g><text x="@N(xs[i])" y="@N(Height - 4)" text-anchor="middle" font-size="11" fill="var(--bs-secondary-color)">@Points[i].Label</text></g>
         }
     </svg>
 }
 
 @code {
-    private const double Width = 600, Height = 240, Left = 44, Right = 8, Top = 10, Bottom = 26;
-    private const int MaxLabels = 8;
+    private const double Width = 640, Height = 220, Left = 40, Right = 32, Top = 10, Bottom = 22;
+    private const int MaxLabels = 7;
 
     [Parameter] public IReadOnlyList<ChartPoint> Points { get; set; } = [];
 
     [Parameter] public double? Goal { get; set; }
+
+    [Parameter] public string? AriaLabel { get; set; }
 }

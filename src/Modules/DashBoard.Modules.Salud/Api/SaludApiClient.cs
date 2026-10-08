@@ -39,7 +39,15 @@ public sealed class SaludApiClient(HttpClient http, SaludOptions options)
                 continue;
             }
 
-            workouts.Add(new Workout(record.StartTime, ReadTitle(record.PayloadJson), (end - record.StartTime).TotalMinutes));
+            var (title, exerciseType) = ReadPayload(record.PayloadJson);
+            if (exerciseType == ExerciseTypes.Walking)
+            {
+                // Los paseos (Google Fit los registra como sesiones) ya cuentan en pasos y distancia.
+                continue;
+            }
+
+            var name = title ?? (exerciseType is { } t ? ExerciseTypes.Name(t) : null) ?? "Entrenamiento";
+            workouts.Add(new Workout(record.StartTime, name, (end - record.StartTime).TotalMinutes));
         }
 
         return SaludResult<IReadOnlyList<Workout>>.Ok(workouts);
@@ -47,31 +55,34 @@ public sealed class SaludApiClient(HttpClient http, SaludOptions options)
 
     private static string Format(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    private static string ReadTitle(string? payloadJson)
+    /// <summary>Título y tipo de ejercicio del payload; null en lo que falte o sea ilegible.</summary>
+    private static (string? Title, int? ExerciseType) ReadPayload(string? payloadJson)
     {
-        const string fallback = "Entrenamiento";
         if (string.IsNullOrWhiteSpace(payloadJson))
         {
-            return fallback;
+            return (null, null);
         }
 
         try
         {
             using var doc = JsonDocument.Parse(payloadJson);
-            if (doc.RootElement.ValueKind == JsonValueKind.Object
-                && doc.RootElement.TryGetProperty("title", out var title)
-                && title.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(title.GetString()))
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return title.GetString()!;
+                return (null, null);
             }
+
+            string? title = doc.RootElement.TryGetProperty("title", out var t)
+                && t.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(t.GetString())
+                ? t.GetString()
+                : null;
+            int? type = doc.RootElement.TryGetProperty("exerciseType", out var e) && e.TryGetInt32(out var n) ? n : null;
+            return (title, type);
         }
         catch (JsonException)
         {
-            // payload ilegible: se usa el título por defecto
+            // payload ilegible: sin título ni tipo
+            return (null, null);
         }
-
-        return fallback;
     }
 
     private async Task<SaludResult<T>> GetAsync<T>(string path, CancellationToken ct)

@@ -26,26 +26,18 @@ else if (!_loaded)
 }
 else
 {
-    <h2 class="h5 mb-3">Hoy y esta semana</h2>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
         <div class="col">
             <div class="card h-100">
                 <div class="card-body">
                     <h2 class="h6 text-secondary"><i class="bi bi-person-walking me-2"></i>Pasos hoy</h2>
-                    @if (_today is { Steps: > 0 } t)
+                    <p class="display-6 mb-2">@((_today?.Steps ?? 0).ToString("N0", Es))</p>
+                    @if (_today?.StepsGoalPercent is { } pct)
                     {
-                        <p class="display-6 mb-2">@t.Steps.ToString("N0", Es)</p>
-                        @if (t.StepsGoalPercent is { } pct)
-                        {
-                            <div class="progress" role="progressbar" aria-label="Progreso de pasos" aria-valuenow="@Pct(pct)" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar" style="width: @Pct(pct)%"></div>
-                            </div>
-                            <small class="text-secondary">obj. @Options.Value.StepsPerDay!.Value.ToString("N0", Es)</small>
-                        }
-                    }
-                    else
-                    {
-                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
+                        <div class="progress" role="progressbar" aria-label="Progreso de pasos" aria-valuenow="@Pct(pct)" aria-valuemin="0" aria-valuemax="100" style="height: 6px">
+                            <div class="progress-bar" style="width: @Pct(pct)%"></div>
+                        </div>
+                        <small class="text-secondary">@Pct(pct) % de @Options.Value.StepsPerDay!.Value.ToString("N0", Es)</small>
                     }
                 </div>
             </div>
@@ -54,14 +46,8 @@ else
             <div class="card h-100">
                 <div class="card-body">
                     <h2 class="h6 text-secondary"><i class="bi bi-geo-alt me-2"></i>Distancia hoy</h2>
-                    @if (_today is { Km: > 0 } d)
-                    {
-                        <p class="display-6 mb-0">@d.Km.ToString("N1", Es) km</p>
-                    }
-                    else
-                    {
-                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
-                    }
+                    <p class="display-6 mb-2">@((_today?.Km ?? 0).ToString("N1", Es)) km</p>
+                    <small class="text-secondary">semana: @_weekKm.ToString("N1", Es) km</small>
                 </div>
             </div>
         </div>
@@ -69,9 +55,18 @@ else
             <div class="card h-100">
                 <div class="card-body">
                     <h2 class="h6 text-secondary"><i class="bi bi-lightning-charge me-2"></i>Entrenos esta semana</h2>
-                    @if (_week is { } w)
+                    <p class="display-6 mb-2">
+                        @WorkoutsDone
+                        @if (WorkoutsGoal is { } wg)
+                        {
+                            <span class="fs-4 text-secondary">/ @wg</span>
+                        }
+                    </p>
+                    @if (WorkoutsGoal is { } goal)
                     {
-                        <p class="display-6 mb-0">@(Positive(w.Goal) is { } g ? $"{w.Count} / {g}" : w.Count.ToString(Es))</p>
+                        <div class="progress" role="progressbar" aria-label="Progreso de entrenos" aria-valuenow="@Pct(WorkoutsDone * 100.0 / goal)" aria-valuemin="0" aria-valuemax="100" style="height: 6px">
+                            <div class="progress-bar" style="width: @Pct(WorkoutsDone * 100.0 / goal)%"></div>
+                        </div>
                     }
                 </div>
             </div>
@@ -82,21 +77,18 @@ else
                     <h2 class="h6 text-secondary"><i class="bi bi-speedometer2 me-2"></i>Peso</h2>
                     @if (_weight is { } wt)
                     {
-                        <p class="display-6 mb-1">@wt.CurrentKg.ToString("N1", Es) kg@if (wt.Date != _todayDate)
-                            {
-                                <small class="text-secondary fs-6"> (@wt.Date.ToString("dd/MM", Es))</small>
-                            }</p>
+                        <p class="display-6 mb-2">@wt.CurrentKg.ToString("N1", Es) kg</p>
                         @if (wt.ChangeOver30Days is { } ch)
                         {
-                            <small class="d-block text-secondary">@(ch > 0 ? "+" : "")@ch.ToString("N1", Es) kg en 30 días</small>
+                            <small class="d-block text-secondary"><span class="@TrendClass(wt)">@SignedKg(ch)</span> en 30 días</small>
                         }
-                        @if (PositiveKg(Options.Value.TargetWeightKg) is { } target)
+                        @if (wt.Date != _todayDate)
                         {
-                            <small class="d-block text-secondary">obj. @target.ToString("N1", Es) kg</small>
-                            @if (wt.DistanceToTarget is { } dist)
-                            {
-                                <small class="d-block text-secondary">@(dist > 0 ? $"a {dist.ToString("N1", Es)} kg del objetivo" : "objetivo alcanzado")</small>
-                            }
+                            <small class="d-block text-secondary">medido el @wt.Date.ToString("dd/MM", Es)</small>
+                        }
+                        @if (PositiveKg(Options.Value.TargetWeightKg) is { } target && wt.DistanceToTarget is { } dist)
+                        {
+                            <small class="d-block text-secondary">@(dist > 0 ? $"a {dist.ToString("N1", Es)} kg del objetivo ({target.ToString("N1", Es)})" : "objetivo alcanzado")</small>
                         }
                     }
                     else
@@ -108,77 +100,86 @@ else
         </div>
     </div>
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-5 mb-3">
-        <h2 class="h5 mb-0">Evolución</h2>
-        <div class="btn-group" role="group" aria-label="Periodo">
-            @foreach (var (p, label) in Periods)
-            {
-                <button type="button" class="btn btn-sm @(_period == p ? "btn-primary" : "btn-outline-secondary")" disabled="@_loading" @onclick="() => SelectPeriod(p)">@label</button>
-            }
-        </div>
-    </div>
-
-    @if (_loading)
-    {
-        <p class="text-secondary" role="status">Cargando…</p>
-    }
-
-    <div class="row row-cols-1 g-3">
-        <div class="col">
-            <div class="card">
+    <div class="row g-3 mt-1">
+        <div class="col-12 col-lg-8">
+            <div class="card h-100">
                 <div class="card-body">
-                    <h2 class="h6 text-secondary">@(_period == Period.Year ? "Pasos por día (media semanal)" : "Pasos por día")</h2>
-                    <BarChart Points="_stepsSeries" Goal="@Positive(Options.Value.StepsPerDay)" />
-                    @if (Positive(Options.Value.StepsPerDay) is { } stepsGoal)
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <ul class="nav nav-pills" role="tablist">
+                            @foreach (var (tab, label) in Tabs)
+                            {
+                                <li class="nav-item" role="presentation">
+                                    <button type="button" role="tab" aria-selected="@(_tab == tab ? "true" : "false")" class="nav-link py-1 px-3 @(_tab == tab ? "active" : "")" @onclick="() => _tab = tab">@label</button>
+                                </li>
+                            }
+                        </ul>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Periodo">
+                            @foreach (var (p, label) in Periods)
+                            {
+                                <button type="button" class="btn @(_period == p ? "btn-primary" : "btn-outline-secondary")" disabled="@_loading" @onclick="() => SelectPeriod(p)">@label</button>
+                            }
+                        </div>
+                    </div>
+                    <h2 class="h6 text-secondary mb-2">@ChartTitle</h2>
+                    @if (_loading)
                     {
-                        <small class="text-secondary">obj. @stepsGoal.ToString("N0", Es)</small>
+                        <p class="text-secondary" role="status">Cargando…</p>
+                    }
+                    else if (_tab == ChartTab.Pasos)
+                    {
+                        <BarChart Points="_stepsSeries" Goal="@Positive(Options.Value.StepsPerDay)" AriaLabel="@ChartTitle" />
+                    }
+                    else if (_tab == ChartTab.Peso)
+                    {
+                        <LineChart Points="_weightSeries" Goal="@PositiveKg(Options.Value.TargetWeightKg)" AriaLabel="@ChartTitle" />
+                    }
+                    else
+                    {
+                        <BarChart Points="_workoutSeries" Goal="@Positive(Options.Value.WorkoutsPerWeek)" AriaLabel="@ChartTitle" />
                     }
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="card">
+        <div class="col-12 col-lg-4">
+            <div class="card h-100">
                 <div class="card-body">
-                    <h2 class="h6 text-secondary">Peso</h2>
-                    <LineChart Points="_weightSeries" Goal="@PositiveKg(Options.Value.TargetWeightKg)" />
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="h6 text-secondary">Entrenos por semana</h2>
-                    <BarChart Points="_workoutSeries" Goal="@Positive(Options.Value.WorkoutsPerWeek)" />
-                    @if (Positive(Options.Value.WorkoutsPerWeek) is { } workoutsGoal)
+                    <h2 class="h6 text-secondary"><i class="bi bi-list-check me-2"></i>Últimos entrenamientos</h2>
+                    @if (_latest.Count == 0)
                     {
-                        <small class="text-secondary">obj. @workoutsGoal.ToString("N0", Es)</small>
+                        <p class="text-secondary mb-0">@SaludMessages.NoData</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                @foreach (var workout in _latest)
+                                {
+                                    <tr>
+                                        <td class="text-secondary text-nowrap">@LocalDate(workout.Start)</td>
+                                        <td>@workout.Title</td>
+                                        <td class="text-secondary text-end text-nowrap">@workout.Minutes.ToString("N0", Es) min</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     }
                 </div>
             </div>
         </div>
     </div>
-
-    <h2 class="h5 mt-5 mb-3">Últimos entrenamientos</h2>
-    @if (_latest.Count == 0)
-    {
-        <p class="text-secondary">@SaludMessages.NoData</p>
-    }
-    else
-    {
-        <ul class="list-group">
-            @foreach (var workout in _latest)
-            {
-                <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
-                    <span><span class="text-secondary me-2">@LocalDate(workout.Start)</span>@workout.Title</span>
-                    <span class="text-secondary">@workout.Minutes.ToString("N0", Es) min</span>
-                </li>
-            }
-        </ul>
-    }
 }
 
 @code {
     private static readonly CultureInfo Es = new("es-ES");
+
+    private enum ChartTab { Pasos, Peso, Entrenos }
+
+    private static readonly (ChartTab Tab, string Label)[] Tabs =
+    [
+        (ChartTab.Pasos, "Pasos"),
+        (ChartTab.Peso, "Peso"),
+        (ChartTab.Entrenos, "Entrenos"),
+    ];
 
     private static readonly (Period Period, string Label)[] Periods =
     [
@@ -196,6 +197,8 @@ else
     private bool _loading;
     private string? _message;
     private Period _period = Period.Days30;
+    private ChartTab _tab = ChartTab.Pasos;
+    private double _weekKm;
     private DateOnly _todayDate;
 
     private TodayStats? _today;
@@ -212,6 +215,26 @@ else
 
     private static double? PositiveKg(double? value) => value is > 0 ? value : null;
 
+    private int WorkoutsDone => _week?.Count ?? 0;
+
+    private int? WorkoutsGoal => Positive(_week?.Goal);
+
+    private static string SignedKg(double kg) => (kg > 0 ? "+" : "") + kg.ToString("N1", Es) + " kg";
+
+    private static string TrendClass(WeightStats stats) => SaludSummary.Trend(stats) switch
+    {
+        WeightTrend.Good => "text-success",
+        WeightTrend.Bad => "text-danger",
+        _ => "",
+    };
+
+    private string ChartTitle => _tab switch
+    {
+        ChartTab.Pasos => _period == Period.Year ? "Pasos por día (media de cada semana)" : "Pasos por día",
+        ChartTab.Peso => "Peso (kg)",
+        _ => "Entrenamientos por semana",
+    };
+
     private string LocalDate(DateTimeOffset start) =>
         TimeZoneInfo.ConvertTime(start, Zone.Zone).ToString("ddd dd/MM", Es);
 
@@ -224,15 +247,15 @@ else
         var version = ++_version;
 
         var stepsToday = Api.GetDailyAsync("Steps", today, today, ct);
-        var distanceToday = Api.GetDailyAsync("Distance", today, today, ct);
-        var sessionsWeek = Api.GetDailyAsync("ExerciseSession", SaludSummary.MondayOf(today), today, ct);
+        var distanceWeek = Api.GetDailyAsync("Distance", SaludSummary.MondayOf(today), today, ct);
+        var sessionsWeek = Api.GetDailyAsync("Workout", SaludSummary.MondayOf(today), today, ct);
         var weightsYear = Api.GetDailyAsync("Weight", today.AddDays(-365), today, ct);
         var workouts = Api.GetWorkoutsAsync(Time.GetUtcNow().AddDays(-90), ct);
         var evolution = LoadEvolutionAsync(_period, from, to, ct);
 
         try
         {
-            await Task.WhenAll(stepsToday, distanceToday, sessionsWeek, weightsYear, workouts, evolution);
+            await Task.WhenAll(stepsToday, distanceWeek, sessionsWeek, weightsYear, workouts, evolution);
         }
         catch (OperationCanceledException)
         {
@@ -243,7 +266,7 @@ else
         _message = SaludMessages.For(
             new[]
             {
-                stepsToday.Result.Status, distanceToday.Result.Status, sessionsWeek.Result.Status,
+                stepsToday.Result.Status, distanceWeek.Result.Status, sessionsWeek.Result.Status,
                 weightsYear.Result.Status, workouts.Result.Status,
             }.Concat(evo.Statuses));
         _loaded = true;
@@ -252,7 +275,8 @@ else
             return;
         }
 
-        _today = SaludSummary.Today(stepsToday.Result.Data!, distanceToday.Result.Data!, today, opts.StepsPerDay);
+        _today = SaludSummary.Today(stepsToday.Result.Data!, distanceWeek.Result.Data!, today, opts.StepsPerDay);
+        _weekKm = SaludSummary.WeekKm(distanceWeek.Result.Data!, today);
         _week = SaludSummary.CurrentWeek(sessionsWeek.Result.Data!, today, opts.WorkoutsPerWeek);
         _weight = SaludSummary.Weight(weightsYear.Result.Data!, today, opts.TargetWeightKg);
         _latest = SaludSummary.Latest(workouts.Result.Data!);
@@ -312,12 +336,12 @@ else
     {
         if (to.DayNumber - from.DayNumber + 1 <= MaxRangeDays)
         {
-            return await Api.GetDailyAsync("ExerciseSession", from, to, ct);
+            return await Api.GetDailyAsync("Workout", from, to, ct);
         }
 
         var split = to.AddDays(-(MaxRangeDays - 1));
-        var early = Api.GetDailyAsync("ExerciseSession", from, split.AddDays(-1), ct);
-        var late = Api.GetDailyAsync("ExerciseSession", split, to, ct);
+        var early = Api.GetDailyAsync("Workout", from, split.AddDays(-1), ct);
+        var late = Api.GetDailyAsync("Workout", split, to, ct);
         await Task.WhenAll(early, late);
         if (early.Result.Status != SaludStatus.Ok)
         {

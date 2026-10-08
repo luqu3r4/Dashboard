@@ -5,9 +5,41 @@ namespace DashBoard.Modules.Salud.Charts;
 /// <summary>Rango de valores representado en el eje vertical.</summary>
 public sealed record ChartScale(double Min, double Max);
 
+/// <summary>Escala ampliada a valores "redondos" y las marcas del eje Y que la dividen.</summary>
+public sealed record ChartAxis(ChartScale Scale, IReadOnlyList<double> Ticks);
+
 /// <summary>Cálculos puros de escala y posición para las gráficas SVG.</summary>
 public static class ChartGeometry
 {
+    /// <summary>Pasos "redondos" (×10^n) entre los que se elige el intervalo del eje.</summary>
+    private static readonly double[] NiceSteps = [1, 2, 2.5, 5, 10];
+
+    /// <summary>
+    /// Amplía <paramref name="scale"/> hasta marcas redondas (p. ej. 0–9.060 → 0–10.000 cada 2.500)
+    /// para dibujar la cuadrícula; apunta a unas <paramref name="intervals"/> divisiones.
+    /// </summary>
+    public static ChartAxis NiceAxis(ChartScale scale, int intervals = 4)
+    {
+        var min = scale.Min;
+        var max = scale.Max > scale.Min ? scale.Max : scale.Min + 1;
+
+        var rough = (max - min) / intervals;
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(rough)));
+        var step = NiceSteps.First(s => s * magnitude >= rough - 1e-12) * magnitude;
+
+        var low = Math.Floor(min / step + 1e-9) * step;
+        var high = Math.Ceiling(max / step - 1e-9) * step;
+        var count = (int)Math.Round((high - low) / step);
+        var ticks = Enumerable.Range(0, count + 1).Select(i => Math.Round(low + i * step, 10)).ToList();
+        return new ChartAxis(new ChartScale(ticks[0], ticks[^1]), ticks);
+    }
+
+    /// <summary>Etiqueta corta del eje Y en es-ES: miles como "2,5k", el resto con un decimal como mucho.</summary>
+    public static string Compact(double value) =>
+        Math.Abs(value) >= 1000
+            ? (value / 1000).ToString("0.#", CultureInfo.GetCultureInfo("es-ES")) + "k"
+            : value.ToString("0.#", CultureInfo.GetCultureInfo("es-ES"));
+
     /// <summary>Proporción del hueco de cada barra que ocupa la barra.</summary>
     private const double BarFill = 0.7;
 

@@ -33,6 +33,26 @@ public static class SaludSummary
         return new WeekWorkouts(count, goal);
     }
 
+    /// <summary>Kilómetros desde el lunes de la semana en curso hasta hoy.</summary>
+    public static double WeekKm(IReadOnlyList<DailyValue> distance, DateOnly today)
+    {
+        var monday = MondayOf(today);
+        return distance.Where(d => d.Date >= monday && d.Date <= today).Sum(d => d.Value) / 1000;
+    }
+
+    /// <summary>Compara el signo de la variación con el lado del objetivo en el que está el peso actual.</summary>
+    public static WeightTrend Trend(WeightStats stats)
+    {
+        if (stats.ChangeOver30Days is not { } change || change == 0 ||
+            stats.DistanceToTarget is not { } distance || distance == 0)
+        {
+            return WeightTrend.Neutral;
+        }
+
+        // Por encima del objetivo conviene bajar; por debajo, subir.
+        return (distance > 0) == (change < 0) ? WeightTrend.Good : WeightTrend.Bad;
+    }
+
     public static WeightStats? Weight(IReadOnlyList<DailyValue> weights, DateOnly today, double? targetKg)
     {
         var current = weights.Where(d => d.Date <= today).OrderByDescending(d => d.Date).FirstOrDefault();

@@ -163,7 +163,10 @@ public class SaludApiClientTests
             [
               {"id":1,"recordType":"ExerciseSession","startTime":"2026-10-06T10:00:00+00:00","endTime":"2026-10-06T11:02:00+00:00","payloadJson":"{\"exerciseType\":70,\"title\":\"Pierna\"}"},
               {"id":2,"recordType":"ExerciseSession","startTime":"2026-10-07T10:00:00+00:00","endTime":"2026-10-07T10:30:00+00:00","payloadJson":"{\"exerciseType\":70}"},
-              {"id":3,"recordType":"ExerciseSession","startTime":"2026-10-08T10:00:00+00:00","endTime":null,"payloadJson":"{\"title\":\"Sin fin\"}"}
+              {"id":3,"recordType":"ExerciseSession","startTime":"2026-10-08T10:00:00+00:00","endTime":null,"payloadJson":"{\"title\":\"Sin fin\"}"},
+              {"id":4,"recordType":"ExerciseSession","startTime":"2026-10-08T12:00:00+00:00","endTime":"2026-10-08T12:25:00+00:00","payloadJson":"{\"exerciseType\":79}"},
+              {"id":5,"recordType":"ExerciseSession","startTime":"2026-10-08T18:00:00+00:00","endTime":"2026-10-08T18:45:00+00:00","payloadJson":"{\"exerciseType\":8}"},
+              {"id":6,"recordType":"ExerciseSession","startTime":"2026-10-08T20:00:00+00:00","endTime":"2026-10-08T20:10:00+00:00","payloadJson":"{\"exerciseType\":999}"}
             ]
             """;
         var handler = new FakeSaludHandler(_ => Json(body));
@@ -176,7 +179,9 @@ public class SaludApiClientTests
         Assert.Equal(
         [
             new Workout(new DateTimeOffset(2026, 10, 6, 10, 0, 0, TimeSpan.Zero), "Pierna", 62),
-            new Workout(new DateTimeOffset(2026, 10, 7, 10, 0, 0, TimeSpan.Zero), "Entrenamiento", 30),
+            new Workout(new DateTimeOffset(2026, 10, 7, 10, 0, 0, TimeSpan.Zero), "Fuerza", 30),
+            new Workout(new DateTimeOffset(2026, 10, 8, 18, 0, 0, TimeSpan.Zero), "Bici", 45),
+            new Workout(new DateTimeOffset(2026, 10, 8, 20, 0, 0, TimeSpan.Zero), "Entrenamiento", 10),
         ], result.Data);
         Assert.Equal(
             [$"/api/health-records?type=ExerciseSession&from={Uri.EscapeDataString(from.ToString("O"))}"],

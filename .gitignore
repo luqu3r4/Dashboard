@@ -9,3 +9,6 @@ docker-compose.override.yml
 
 # Secretos locales
 .env
+
+# Ficheros de trabajo de las skills de Superpowers (maquetas, registros)
+.superpowers/
